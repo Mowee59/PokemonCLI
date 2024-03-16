@@ -1,10 +1,10 @@
 import inquirer from "inquirer";
 import fetchPokemon from "./fetchPokemon.js";
 import path from "path";
-import { createFolder, saveImage } from "./save.js";
+import { createFolder, saveImage, writeStats } from "./save.js";
 
 const askForPokemon = async () => {
-  return await inquirer.prompt([
+  return inquirer.prompt([
     {
       type: "input",
       name: "pokemonName",
@@ -14,7 +14,7 @@ const askForPokemon = async () => {
 };
 
 const askForDownload = async () => {
-  return await inquirer.prompt([
+  return inquirer.prompt([
     {
       type: "checkbox",
       name: "downloadChoices",
@@ -25,7 +25,7 @@ const askForDownload = async () => {
 };
 
 const askContinue = async () => {
-  return await inquirer.prompt([
+  return inquirer.prompt([
     {
       type: "confirm",
       name: "continue",
@@ -40,15 +40,14 @@ const handleChoices = (choiceList, pokemon) => {
     .map((choice) => {
       switch (choice) {
         case "Stats":
-          // TODO: IMPLEMENT SAVESTATS FUNC
+          // In case Stats are select to be saved
           const stats = pokemon.stats;
-          console.log(stats[0].base_stat);
-          console.log(stats[0].stat.name);
-          console.log(Object.entries(stats));
-          break;
+          const filepath = path.join(pokemon.name, "stats.txt");
+          return writeStats(filepath, stats);
 
         case "Sprites":
-          //TODO: IMPLEMENT SPRITES FUNC
+          // In case Sprites are select to be saved
+          // We return a list of pending promises to save the sprites
           const spritesTaskQueue = [];
           const sprites = pokemon.sprites;
           for (const [fileName, imageAddress] of Object.entries(sprites)) {
@@ -58,7 +57,9 @@ const handleChoices = (choiceList, pokemon) => {
           return spritesTaskQueue;
 
         case "Artwork":
-          // Iterating through the artworks and calling saveImage each time
+          // In case artwork are select to be saved
+          // We return a list of pending promises to save the artworks
+
           const artworkTaskQueue = [];
           const artwork = pokemon.sprites.other["official-artwork"];
           for (const [fileName, imageAddress] of Object.entries(artwork)) {
@@ -69,33 +70,38 @@ const handleChoices = (choiceList, pokemon) => {
       }
     })
     .flat();
-  console.log(taskPool);
-
-  // }
+  return taskPool;
 };
 
 const main = async () => {
+  let continueExecution = true;
   console.log("============= POKEMON DOWNLOADER =============");
-  // fetchPokemon is set to return null if any error is thrown during the process
-  // We keep asking a pokemon name until a request is succesfull
-  let pokemon = null;
-  let pokemonName = "";
-  while (!pokemon) {
-    try {
-      const answerName = await askForPokemon();
-      pokemonName = answerName.pokemonName.toLowerCase();
-      pokemon = await fetchPokemon(pokemonName);
-    } catch (error) {
-      console.error(error);
+  while (continueExecution) {
+    // fetchPokemon is set to return null if any error is thrown during the process
+    // We keep asking a pokemon name until a request is succesfull
+    let pokemon = null;
+    let pokemonName = "";
+    while (!pokemon) {
+      try {
+        const answerName = await askForPokemon();
+        pokemonName = answerName.pokemonName.toLowerCase();
+        pokemon = await fetchPokemon(pokemonName);
+      } catch (error) {
+        console.error(error);
+      }
     }
+
+    // As soon as we get a succesful request, we create a folder
+
+    // Ask what to download and retrieve the choice as a list
+    const answerDownload = await askForDownload();
+    await createFolder(pokemonName);
+    const userChoices = answerDownload.downloadChoices;
+    const tasks = handleChoices(userChoices, pokemon);
+    await Promise.all(tasks);
+    const answerContinue = await askContinue();
+    continueExecution = answerContinue.continue;
   }
-
-  createFolder(pokemonName);
-  // Ask what to download and retrieve the choice as a list
-  const answerDownload = await askForDownload();
-  const userChoices = answerDownload.downloadChoices;
-
-  await handleChoices(userChoices, pokemon);
 };
 
 export { askForPokemon, askForDownload, askContinue, main };

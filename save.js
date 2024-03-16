@@ -14,9 +14,18 @@ export const createFolder = async (name) => {
 
 export const writeStats = async (filePath, stats) => {
   try {
-    await fs.writeFile(filePath, data);
-  } catch (error) {}
+    let formatedString = "";
+    for (let statEntry in stats) {
+      formatedString += `${stats[statEntry].stat.name}: ${stats[statEntry].base_stat}\n`;
+    }
+    await fs.writeFile(filePath, formatedString);
+    console.log(`Stats saved at ${filePath}`);
+  } catch (err) {
+    console.error(err);
+    console.log("here");
+  }
 };
+
 export const saveImage = async (filePath, imageAddress) => {
   try {
     //Fetching data, converting it to an Array buffer, then to a buffer in order to save it wi fs.writefile
