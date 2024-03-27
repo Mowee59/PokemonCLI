@@ -4,7 +4,7 @@ import path from "path";
 
 export const createFolder = async (name) => {
   try {
-    // Recursive is set to true so we don't throw an error is directory already exists
+    // Recursive is set to true so we don't throw an error if directory already exists
     await fs.mkdir(name, { recursive: true });
     console.log(`${name} directory created`);
   } catch (err) {
